@@ -1,7 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
-import { useFormStatus } from "react-dom";
+import { useState, useEffect } from "react";
 import { generateCertificateAction } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,25 +11,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending} className="w-full">
-      {pending ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Generating...
-        </>
-      ) : (
-        "Generate Certificate"
-      )}
-    </Button>
-  );
-}
+type State = {
+  data: { certificateDraft: string } | null;
+  error: string | null;
+};
 
 export function MedicalCertificateForm() {
-  const initialState = { data: null, error: null };
-  const [state, formAction] = useActionState(generateCertificateAction, initialState);
+  const [state, setState] = useState<State>({ data: null, error: null });
+  const [pending, setPending] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -43,9 +31,20 @@ export function MedicalCertificateForm() {
     }
   }, [state.error, toast]);
 
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setPending(true);
+    const formData = new FormData(e.currentTarget);
+    const input: Record<string, string> = {};
+    formData.forEach((value, key) => { input[key] = value as string; });
+    const result = await generateCertificateAction(input);
+    setState(result);
+    setPending(false);
+  }
+
   return (
     <Card className="w-full">
-      <form action={formAction}>
+      <form onSubmit={handleSubmit}>
         <CardHeader>
           <CardTitle>Patient Information</CardTitle>
           <CardDescription>Enter the details to create a draft certificate.</CardDescription>
@@ -85,7 +84,16 @@ export function MedicalCertificateForm() {
           </div>
         </CardContent>
         <CardFooter>
-          <SubmitButton />
+          <Button type="submit" disabled={pending} className="w-full">
+            {pending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              "Generate Certificate"
+            )}
+          </Button>
         </CardFooter>
       </form>
       {state.data && (

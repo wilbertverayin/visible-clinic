@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useActionState } from "react";
-import { useFormStatus } from "react-dom";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -18,36 +17,21 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { addToWaitlistAction } from "@/app/waitlist/actions";
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-      {pending ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Submitting...
-        </>
-      ) : (
-        "Notify Me"
-      )}
-    </Button>
-  );
-}
-
 export function Cta() {
-  const initialState = { success: false, message: null };
-  const [state, formAction] = useActionState(addToWaitlistAction, initialState);
+  const [state, setState] = useState<{ success: boolean; message: string | null }>({
+    success: false,
+    message: null,
+  });
+  const [pending, setPending] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const { toast } = useToast();
-  
-  // Ref to hold the form element
-  const formRef = React.useRef<HTMLFormElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (state.message) {
       if (state.success) {
         setShowDialog(true);
-        formRef.current?.reset(); // Clear form on success
+        formRef.current?.reset();
       } else {
         toast({
           title: "Error",
@@ -57,6 +41,15 @@ export function Cta() {
       }
     }
   }, [state, toast]);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setPending(true);
+    const formData = new FormData(e.currentTarget);
+    const result = await addToWaitlistAction({ success: false, message: null }, formData);
+    setState(result);
+    setPending(false);
+  }
 
   return (
     <>
@@ -85,7 +78,7 @@ export function Cta() {
               </p>
               <form
                 ref={formRef}
-                action={formAction}
+                onSubmit={handleSubmit}
                 className="mx-auto mt-8 flex max-w-md flex-col gap-4 sm:flex-row"
               >
                 <Input
@@ -95,7 +88,16 @@ export function Cta() {
                   className="flex-1 border-slate-700 bg-slate-800 text-white placeholder:text-slate-400 focus-visible:ring-primary"
                   required
                 />
-                <SubmitButton />
+                <Button type="submit" disabled={pending} className="w-full sm:w-auto">
+                  {pending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    "Notify Me"
+                  )}
+                </Button>
               </form>
             </div>
           </div>
