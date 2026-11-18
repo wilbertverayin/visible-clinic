@@ -84,6 +84,7 @@ export function Cta() {
                 <Input
                   type="email"
                   name="email"
+                  aria-label="Email address"
                   placeholder="Enter your email address"
                   className="flex-1 border-slate-700 bg-slate-800 text-white placeholder:text-slate-400 focus-visible:ring-primary"
                   required
